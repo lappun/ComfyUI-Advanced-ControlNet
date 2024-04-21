@@ -11,7 +11,7 @@ import torch as th
 import torch.nn as nn
 from torch import Tensor
 from einops import rearrange, repeat
-
+from typing import List, Union, Tuple, Dict
 from comfy.ldm.modules.diffusionmodules.util import (
     zero_module,
     timestep_embedding,
@@ -193,7 +193,7 @@ class SparseMethod(ABC):
         self.method = method
 
     @abstractmethod
-    def get_indexes(self, hint_length: int, full_length: int) -> list[int]:
+    def get_indexes(self, hint_length: int, full_length: int) -> List[int]:
         pass
 
 
@@ -209,7 +209,7 @@ class SparseSpreadMethod(SparseMethod):
         super().__init__(self.SPREAD)
         self.spread = spread
 
-    def get_indexes(self, hint_length: int, full_length: int) -> list[int]:
+    def get_indexes(self, hint_length: int, full_length: int) -> List[int]:
         # if hint_length >= full_length, limit hints to full_length
         if hint_length >= full_length:
             return list(range(full_length))
@@ -243,11 +243,11 @@ class SparseSpreadMethod(SparseMethod):
 
 
 class SparseIndexMethod(SparseMethod):
-    def __init__(self, idxs: list[int]):
+    def __init__(self, idxs: List[int]):
         super().__init__(self.INDEX)
         self.idxs = idxs
 
-    def get_indexes(self, hint_length: int, full_length: int) -> list[int]:
+    def get_indexes(self, hint_length: int, full_length: int) -> List[int]:
         orig_hint_length = hint_length
         if hint_length > full_length:
             hint_length = full_length
@@ -282,13 +282,13 @@ class BlockType:
     DOWN = "down"
     MID = "mid"
 
-def get_down_block_max(mm_state_dict: dict[str, Tensor]) -> int:
+def get_down_block_max(mm_state_dict: Dict[str, Tensor]) -> int:
     return get_block_max(mm_state_dict, "down_blocks")
 
-def get_up_block_max(mm_state_dict: dict[str, Tensor]) -> int:
+def get_up_block_max(mm_state_dict: Dict[str, Tensor]) -> int:
     return get_block_max(mm_state_dict, "up_blocks")
 
-def get_block_max(mm_state_dict: dict[str, Tensor], block_name: str) -> int:
+def get_block_max(mm_state_dict: Dict[str, Tensor], block_name: str) -> int:
     # keep track of biggest down_block count in module
     biggest_block = -1
     for key in mm_state_dict.keys():
@@ -302,14 +302,14 @@ def get_block_max(mm_state_dict: dict[str, Tensor], block_name: str) -> int:
                 pass
     return biggest_block
 
-def has_mid_block(mm_state_dict: dict[str, Tensor]):
+def has_mid_block(mm_state_dict: Dict[str, Tensor]):
     # check if keys contain mid_block
     for key in mm_state_dict.keys():
         if key.startswith("mid_block."):
             return True
     return False
 
-def get_position_encoding_max_len(mm_state_dict: dict[str, Tensor], mm_name: str=None) -> int:
+def get_position_encoding_max_len(mm_state_dict: Dict[str, Tensor], mm_name: str=None) -> int:
     # use pos_encoder.pe entries to determine max length - [1, {max_length}, {320|640|1280}]
     for key in mm_state_dict.keys():
         if key.endswith("pos_encoder.pe"):
@@ -318,7 +318,7 @@ def get_position_encoding_max_len(mm_state_dict: dict[str, Tensor], mm_name: str
 
 
 class SparseCtrlMotionWrapper(nn.Module):
-    def __init__(self, mm_state_dict: dict[str, Tensor]):
+    def __init__(self, mm_state_dict: Dict[str, Tensor]):
         super().__init__()
         self.down_blocks: Iterable[MotionModule] = None
         self.up_blocks: Iterable[MotionModule] = None
@@ -477,7 +477,7 @@ class MotionModule(nn.Module):
         for motion_module in self.motion_modules:
             motion_module.set_masks(masks, min_val, max_val)
     
-    def set_sub_idxs(self, sub_idxs: list[int]):
+    def set_sub_idxs(self, sub_idxs: List[int]):
         for motion_module in self.motion_modules:
             motion_module.set_sub_idxs(sub_idxs)
 
@@ -537,7 +537,7 @@ class VanillaTemporalModule(nn.Module):
     def set_masks(self, masks: Tensor, min_val: float, max_val: float):
         self.temporal_transformer.set_masks(masks, min_val, max_val)
     
-    def set_sub_idxs(self, sub_idxs: list[int]):
+    def set_sub_idxs(self, sub_idxs: List[int]):
         self.temporal_transformer.set_sub_idxs(sub_idxs)
 
     def set_strength(self, strength: float):
@@ -586,7 +586,7 @@ class TemporalTransformer3DModel(nn.Module):
         self.scale_max = 1.0
         self.raw_scale_mask: Union[Tensor, None] = None
         self.temp_scale_mask: Union[Tensor, None] = None
-        self.sub_idxs: Union[list[int], None] = None
+        self.sub_idxs: Union[List[int], None] = None
         self.prev_hidden_states_batch = 0
 
 
@@ -632,7 +632,7 @@ class TemporalTransformer3DModel(nn.Module):
         self.scale_max = max_val
         self.raw_scale_mask = masks
 
-    def set_sub_idxs(self, sub_idxs: list[int]):
+    def set_sub_idxs(self, sub_idxs: List[int]):
         self.sub_idxs = sub_idxs
         for block in self.transformer_blocks:
             block.set_sub_idxs(sub_idxs)
@@ -775,7 +775,7 @@ class TemporalTransformerBlock(nn.Module):
         for block in self.attention_blocks:
             block.set_scale_multiplier(multiplier)
 
-    def set_sub_idxs(self, sub_idxs: list[int]):
+    def set_sub_idxs(self, sub_idxs: List[int]):
         for block in self.attention_blocks:
             block.set_sub_idxs(sub_idxs)
 
@@ -822,7 +822,7 @@ class PositionalEncoding(nn.Module):
         self.register_buffer("pe", pe)
         self.sub_idxs = None
 
-    def set_sub_idxs(self, sub_idxs: list[int]):
+    def set_sub_idxs(self, sub_idxs: List[int]):
         self.sub_idxs = sub_idxs
 
     def forward(self, x):
@@ -907,7 +907,7 @@ class VersatileAttention(CrossAttentionMM):
         else:
             self.scale = multiplier
 
-    def set_sub_idxs(self, sub_idxs: list[int]):
+    def set_sub_idxs(self, sub_idxs: List[int]):
         if self.pos_encoder != None:
             self.pos_encoder.set_sub_idxs(sub_idxs)
 

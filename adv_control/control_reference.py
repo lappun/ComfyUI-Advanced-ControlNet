@@ -15,11 +15,11 @@ from comfy.ldm.modules.diffusionmodules import openaimodel
 from .logger import logger
 from .utils import (AdvancedControlBase, ControlWeights, TimestepKeyframeGroup, AbstractPreprocWrapper,
                     deepcopy_with_sharing, prepare_mask_batch, broadcast_image_to_full)
-
+from typing import List, Union, Tuple, Dict, Set
 
 def refcn_sample_factory(orig_comfy_sample: Callable, is_custom=False) -> Callable:
     def get_refcn(control: ControlBase, order: int=-1):
-        ref_set: set[ReferenceAdvanced] = set()
+        ref_set: Set[ReferenceAdvanced] = set()
         if control is None:
             return ref_set
         if type(control) == ReferenceAdvanced:
@@ -53,7 +53,7 @@ def refcn_sample_factory(orig_comfy_sample: Callable, is_custom=False) -> Callab
 
             # first, handle attn module injection
             all_modules = torch_dfs(model.model)
-            attn_modules: list[RefBasicTransformerBlock] = []
+            attn_modules: List[RefBasicTransformerBlock] = []
             for module in all_modules:
                 if isinstance(module, BasicTransformerBlock):
                     attn_modules.append(module)
@@ -68,7 +68,7 @@ def refcn_sample_factory(orig_comfy_sample: Callable, is_custom=False) -> Callab
             # figure out which module is middle block
             if hasattr(model.model.diffusion_model, "middle_block"):
                 mid_modules = torch_dfs(model.model.diffusion_model.middle_block)
-                mid_attn_modules: list[RefBasicTransformerBlock] = [module for module in mid_modules if isinstance(module, BasicTransformerBlock)]
+                mid_attn_modules: List[RefBasicTransformerBlock] = [module for module in mid_modules if isinstance(module, BasicTransformerBlock)]
                 for module in mid_attn_modules:
                     module.injection_holder.is_middle = True
 
@@ -109,7 +109,7 @@ def refcn_sample_factory(orig_comfy_sample: Callable, is_custom=False) -> Callab
             orig_model_options = model.model_options
             new_model_options = model.model_options.copy()
             new_model_options["transformer_options"] = model.model_options["transformer_options"].copy()
-            ref_list: list[ReferenceAdvanced] = list(ref_set)
+            ref_list: List[ReferenceAdvanced] = list(ref_set)
             new_model_options["transformer_options"][REF_CONTROL_LIST_ALL] = sorted(ref_list, key=lambda x: x.order)
             model.model_options = new_model_options
             # continue with original function
@@ -117,14 +117,14 @@ def refcn_sample_factory(orig_comfy_sample: Callable, is_custom=False) -> Callab
         finally:
             # cleanup injections
             # restore attn modules
-            attn_modules: list[RefBasicTransformerBlock] = reference_injections.attn_modules
+            attn_modules: List[RefBasicTransformerBlock] = reference_injections.attn_modules
             for module in attn_modules:
                 module.injection_holder.restore(module)
                 module.injection_holder.clean()
                 del module.injection_holder
             del attn_modules
             # restore gn modules
-            gn_modules: list[RefTimestepEmbedSequential] = reference_injections.gn_modules
+            gn_modules: List[RefTimestepEmbedSequential] = reference_injections.gn_modules
             for module in gn_modules:
                 module.injection_holder.restore(module)
                 module.injection_holder.clean()
@@ -387,7 +387,7 @@ class BankStylesBasicTransformerBlock:
     def __init__(self):
         self.bank = []
         self.style_cfgs = []
-        self.cn_idx: list[int] = []
+        self.cn_idx: List[int] = []
     
     def get_avg_style_fidelity(self):
         return sum(self.style_cfgs) / float(len(self.style_cfgs))
@@ -406,7 +406,7 @@ class BankStylesTimestepEmbedSequential:
         self.var_bank = []
         self.mean_bank = []
         self.style_cfgs = []
-        self.cn_idx: list[int] = []
+        self.cn_idx: List[int] = []
 
     def get_avg_var_bank(self):
         return sum(self.var_bank) / float(len(self.var_bank))
@@ -461,7 +461,7 @@ class InjectionTimestepEmbedSequentialHolder:
 
 
 class ReferenceInjections:
-    def __init__(self, attn_modules: list['RefBasicTransformerBlock']=None, gn_modules: list['RefTimestepEmbedSequential']=None):
+    def __init__(self, attn_modules: List['RefBasicTransformerBlock']=None, gn_modules: List['RefTimestepEmbedSequential']=None):
         self.attn_modules = attn_modules if attn_modules else []
         self.gn_modules = gn_modules if gn_modules else []
         self.diffusion_model_orig_forward: Callable = None
@@ -495,7 +495,7 @@ def factory_forward_inject_UNetModel(reference_injections: ReferenceInjections):
         control = kwargs.get("control", None)
         transformer_options = kwargs.get("transformer_options", None)
         # look for ReferenceAttnPatch objects to get ReferenceAdvanced objects
-        ref_controlnets: list[ReferenceAdvanced] = transformer_options[REF_CONTROL_LIST_ALL]
+        ref_controlnets: List[ReferenceAdvanced] = transformer_options[REF_CONTROL_LIST_ALL]
         # discard any controlnets that should not run
         ref_controlnets = [x for x in ref_controlnets if x.should_run()]
         # if nothing related to reference controlnets, do nothing special
@@ -560,7 +560,7 @@ def factory_forward_inject_UNetModel(reference_injections: ReferenceInjections):
 class RefBasicTransformerBlock(BasicTransformerBlock):
     injection_holder: InjectionBasicTransformerBlockHolder = None
 
-def _forward_inject_BasicTransformerBlock(self: RefBasicTransformerBlock, x: Tensor, context: Tensor=None, transformer_options: dict[str]={}):
+def _forward_inject_BasicTransformerBlock(self: RefBasicTransformerBlock, x: Tensor, context: Tensor=None, transformer_options: Dict[str,int]={}):
     extra_options = {}
     block = transformer_options.get("block", None)
     block_index = transformer_options.get("block_index", 0)
@@ -595,7 +595,7 @@ def _forward_inject_BasicTransformerBlock(self: RefBasicTransformerBlock, x: Ten
     uc_idx_mask = transformer_options.get(REF_UNCOND_IDXS, [])
     c_idx_mask = transformer_options.get(REF_COND_IDXS, [])
     # WRITE mode will only have one ReferenceAdvanced, other modes will have all ReferenceAdvanced
-    ref_controlnets: list[ReferenceAdvanced] = transformer_options.get(REF_ATTN_CONTROL_LIST, None)
+    ref_controlnets: List[ReferenceAdvanced] = transformer_options.get(REF_ATTN_CONTROL_LIST, None)
     ref_machine_state: str = transformer_options.get(REF_ATTN_MACHINE_STATE, None)
     # if in WRITE mode, save n and style_fidelity
     if ref_controlnets and ref_machine_state == MachineState.WRITE:
@@ -761,12 +761,12 @@ def forward_timestep_embed_ref_inject_factory(orig_timestep_embed_inject_factory
         eps = 1e-6
         x: Tensor = orig_timestep_embed_inject_factory(*args, **kwargs)
         y: Tensor = None
-        transformer_options: dict[str] = args[4]
+        transformer_options: Dict[str] = args[4]
         # Reference CN stuff
         uc_idx_mask = transformer_options.get(REF_UNCOND_IDXS, [])
         c_idx_mask = transformer_options.get(REF_COND_IDXS, [])
         # WRITE mode will only have one ReferenceAdvanced, other modes will have all ReferenceAdvanced
-        ref_controlnets: list[ReferenceAdvanced] = transformer_options.get(REF_ADAIN_CONTROL_LIST, None)
+        ref_controlnets: List[ReferenceAdvanced] = transformer_options.get(REF_ADAIN_CONTROL_LIST, None)
         ref_machine_state: str = transformer_options.get(REF_ADAIN_MACHINE_STATE, None)
         
         # if in WRITE mode, save var, mean, and style_cfg

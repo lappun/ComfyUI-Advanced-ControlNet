@@ -6,7 +6,7 @@ import comfy.model_detection
 from comfy.utils import UNET_MAP_BASIC, UNET_MAP_RESNET, UNET_MAP_ATTENTIONS, TRANSFORMER_BLOCKS
 
 import torch
-
+from typing import List, Union, Tuple, Dict
 
 from comfy.ldm.modules.diffusionmodules.util import (
     zero_module,
@@ -364,7 +364,7 @@ TEMPORAL_RESNET = {
 }
 
 
-def svd_unet_config_from_diffusers_unet(state_dict: dict[str, Tensor], dtype):
+def svd_unet_config_from_diffusers_unet(state_dict: Dict[str, Tensor], dtype):
     match = {}
     transformer_depth = []
 

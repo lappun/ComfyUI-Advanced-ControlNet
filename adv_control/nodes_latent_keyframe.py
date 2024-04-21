@@ -5,7 +5,7 @@ from collections.abc import Iterable
 from .utils import LatentKeyframe, LatentKeyframeGroup, BIGMIN, BIGMAX
 from .utils import StrengthInterpolation as SI
 from .logger import logger
-
+from typing import List, Union, Tuple, Dict, Set
 
 class LatentKeyframeNode:
     @classmethod
@@ -86,7 +86,7 @@ class LatentKeyframeGroupNode:
         except ValueError as e:
             raise ValueError(f"index '{raw_index}' must be an integer.", e)
 
-    def convert_to_latent_keyframes(self, latent_indeces: str, latent_count: int) -> set[LatentKeyframe]:
+    def convert_to_latent_keyframes(self, latent_indeces: str, latent_count: int) -> Set[LatentKeyframe]:
         if not latent_indeces:
             return set()
         int_latent_indeces = [i for i in range(0, latent_count)]
@@ -250,7 +250,7 @@ class LatentKeyframeBatchedGroupNode:
     FUNCTION = "load_keyframe"
     CATEGORY = "Adv-ControlNet 🛂🅐🅒🅝/keyframes"
 
-    def load_keyframe(self, float_strengths: Union[float, list[float]],
+    def load_keyframe(self, float_strengths: Union[float, List[float]],
                       prev_latent_kf: LatentKeyframeGroup=None,
                       prev_latent_keyframe: LatentKeyframeGroup=None, # old name
                       print_keyframes=False):

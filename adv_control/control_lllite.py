@@ -12,7 +12,7 @@ from comfy.controlnet import ControlBase
 
 from .logger import logger
 from .utils import AdvancedControlBase, deepcopy_with_sharing, prepare_mask_batch
-
+from typing import List, Union, Tuple, Dict
 
 def extra_options_to_module_prefix(extra_options):
     # extra_options = {'transformer_index': 2, 'block_index': 8, 'original_shape': [2, 4, 128, 128], 'block': ('input', 7), 'n_heads': 20, 'dim_head': 64}
@@ -40,7 +40,7 @@ def extra_options_to_module_prefix(extra_options):
 class LLLitePatch:
     ATTN1 = "attn1"
     ATTN2 = "attn2"
-    def __init__(self, modules: dict[str, 'LLLiteModule'], patch_type: str, control: Union[AdvancedControlBase, ControlBase]=None):
+    def __init__(self, modules: Dict[str, 'LLLiteModule'], patch_type: str, control: Union[AdvancedControlBase, ControlBase]=None):
         self.modules = modules
         self.control = control
         self.patch_type = patch_type

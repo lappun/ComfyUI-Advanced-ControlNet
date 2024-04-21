@@ -16,7 +16,7 @@ from .control_svd import svd_unet_config_from_diffusers_unet, SVDControlNet, svd
 from .utils import (AdvancedControlBase, TimestepKeyframeGroup, LatentKeyframeGroup, ControlWeightType, ControlWeights, WeightTypeException,
                     manual_cast_clean_groupnorm, disable_weight_init_clean_groupnorm, prepare_mask_batch, get_properly_arranged_t2i_weights, load_torch_file_with_dict_factory)
 from .logger import logger
-
+from typing import List, Union, Tuple, Dict
 
 class ControlNetAdvanced(ControlNet, AdvancedControlBase):
     def __init__(self, control_model, timestep_keyframes: TimestepKeyframeGroup, global_average_pooling=False, device=None, load_device=None, manual_cast_dtype=None):
@@ -524,7 +524,7 @@ def is_advanced_controlnet(input_object):
     return hasattr(input_object, "sub_idxs")
 
 
-def load_sparsectrl(ckpt_path: str, controlnet_data: dict[str, Tensor]=None, timestep_keyframe: TimestepKeyframeGroup=None, sparse_settings=SparseSettings.default(), model=None) -> SparseCtrlAdvanced:
+def load_sparsectrl(ckpt_path: str, controlnet_data: Dict[str, Tensor]=None, timestep_keyframe: TimestepKeyframeGroup=None, sparse_settings=SparseSettings.default(), model=None) -> SparseCtrlAdvanced:
     if controlnet_data is None:
         controlnet_data = comfy.utils.load_torch_file(ckpt_path, safe_load=True)
     # first, separate out motion part from normal controlnet part and attempt to load that portion
@@ -672,7 +672,7 @@ def load_sparsectrl(ckpt_path: str, controlnet_data: dict[str, Tensor]=None, tim
     return control
 
 
-def load_controllllite(ckpt_path: str, controlnet_data: dict[str, Tensor]=None, timestep_keyframe: TimestepKeyframeGroup=None):
+def load_controllllite(ckpt_path: str, controlnet_data: Dict[str, Tensor]=None, timestep_keyframe: TimestepKeyframeGroup=None):
     if controlnet_data is None:
         controlnet_data = comfy.utils.load_torch_file(ckpt_path, safe_load=True)
     # adapted from https://github.com/kohya-ss/ControlNet-LLLite-ComfyUI
@@ -721,7 +721,7 @@ def load_controllllite(ckpt_path: str, controlnet_data: dict[str, Tensor]=None, 
     return control
 
 
-def load_svdcontrolnet(ckpt_path: str, controlnet_data: dict[str, Tensor]=None, timestep_keyframe: TimestepKeyframeGroup=None, model=None):
+def load_svdcontrolnet(ckpt_path: str, controlnet_data: Dict[str, Tensor]=None, timestep_keyframe: TimestepKeyframeGroup=None, model=None):
     if controlnet_data is None:
         controlnet_data = comfy.utils.load_torch_file(ckpt_path, safe_load=True)
 

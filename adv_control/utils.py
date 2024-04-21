@@ -11,11 +11,12 @@ from comfy.controlnet import ControlBase, broadcast_image_to
 from comfy.model_patcher import ModelPatcher
 
 from .logger import logger
+from typing import List, Union, Tuple, Dict
 
 BIGMIN = -(2**53-1)
 BIGMAX = (2**53-1)
 
-def load_torch_file_with_dict_factory(controlnet_data: dict[str, Tensor], orig_load_torch_file: Callable):
+def load_torch_file_with_dict_factory(controlnet_data: Dict[str, Tensor], orig_load_torch_file: Callable):
     def load_torch_file_with_dict(*args, **kwargs):
         # immediately restore load_torch_file to original version
         comfy.utils.load_torch_file = orig_load_torch_file
@@ -23,7 +24,7 @@ def load_torch_file_with_dict_factory(controlnet_data: dict[str, Tensor], orig_l
     return load_torch_file_with_dict
 
 
-def get_properly_arranged_t2i_weights(initial_weights: list[float]):
+def get_properly_arranged_t2i_weights(initial_weights: List[float]):
     new_weights = []
     new_weights.extend([initial_weights[0]]*3)
     new_weights.extend([initial_weights[1]]*3)
@@ -44,7 +45,7 @@ class ControlWeightType:
 
 
 class ControlWeights:
-    def __init__(self, weight_type: str, base_multiplier: float=1.0, flip_weights: bool=False, weights: list[float]=None, weight_mask: Tensor=None):
+    def __init__(self, weight_type: str, base_multiplier: float=1.0, flip_weights: bool=False, weights: List[float]=None, weight_mask: Tensor=None):
         self.weight_type = weight_type
         self.base_multiplier = base_multiplier
         self.flip_weights = flip_weights
@@ -75,25 +76,25 @@ class ControlWeights:
         return cls(ControlWeightType.UNIVERSAL, weight_mask=weight_mask)
 
     @classmethod
-    def t2iadapter(cls, weights: list[float]=None, flip_weights: bool=False):
+    def t2iadapter(cls, weights: List[float]=None, flip_weights: bool=False):
         if weights is None:
             weights = [1.0]*12
         return cls(ControlWeightType.T2IADAPTER, weights=weights,flip_weights=flip_weights)
 
     @classmethod
-    def controlnet(cls, weights: list[float]=None, flip_weights: bool=False):
+    def controlnet(cls, weights: List[float]=None, flip_weights: bool=False):
         if weights is None:
             weights = [1.0]*13
         return cls(ControlWeightType.CONTROLNET, weights=weights, flip_weights=flip_weights)
     
     @classmethod
-    def controllora(cls, weights: list[float]=None, flip_weights: bool=False):
+    def controllora(cls, weights: List[float]=None, flip_weights: bool=False):
         if weights is None:
             weights = [1.0]*10
         return cls(ControlWeightType.CONTROLLORA, weights=weights, flip_weights=flip_weights)
     
     @classmethod
-    def controllllite(cls, weights: list[float]=None, flip_weights: bool=False):
+    def controllllite(cls, weights: List[float]=None, flip_weights: bool=False):
         if weights is None:
             # TODO: make this have a real value
             weights = [1.0]*200
@@ -117,7 +118,7 @@ class LatentKeyframe:
 # always maintain sorted state (by batch_index of LatentKeyframe)
 class LatentKeyframeGroup:
     def __init__(self) -> None:
-        self.keyframes: list[LatentKeyframe] = []
+        self.keyframes: List[LatentKeyframe] = []
 
     def add(self, keyframe: LatentKeyframe) -> None:
         added = False
@@ -190,7 +191,7 @@ class TimestepKeyframe:
 # always maintain sorted state (by start_percent of TimestepKeyFrame)
 class TimestepKeyframeGroup:
     def __init__(self) -> None:
-        self.keyframes: list[TimestepKeyframe] = []
+        self.keyframes: List[TimestepKeyframe] = []
         self.keyframes.append(TimestepKeyframe.default())
 
     def add(self, keyframe: TimestepKeyframe) -> None:
